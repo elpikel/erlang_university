@@ -24,5 +24,6 @@ nub([X|Xs], Ns) ->
     false -> nub(Xs, [X|Ns])
   end.
 
-exists_in(X, Ns) ->
-  lists:any(fun(N) -> N == X end, Ns).
+exists_in(_X, []) -> false;
+exists_in(X, [X|_Xs]) -> true;
+exists_in(X, [_Y|Xs]) -> exists_in(X, Xs).
