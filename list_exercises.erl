@@ -1,5 +1,5 @@
 -module(list_exercises).
--export([double/1,evens/1,nub/1]).
+-export([double/1,evens/1,nub/1,palindrome/1]).
 
 double([]) -> [];
 double([X|Xs]) -> double(Xs, [X*2]).
@@ -27,3 +27,12 @@ nub([X|Xs], Ns) ->
 exists_in(_X, []) -> false;
 exists_in(X, [X|_Xs]) -> true;
 exists_in(X, [_Y|Xs]) -> exists_in(X, Xs).
+
+palindrome([]) -> true;
+palindrome(Letters) ->
+  PureText = make_pure(Letters),
+  lists:reverse(PureText) == PureText.
+
+make_pure(Letters) ->
+  LowerCased = string:to_lower(Letters),
+  re:replace(LowerCased,"[^a-z]","",[global,{return,list}]).
