@@ -9,7 +9,12 @@
 -module(frequency).
 -export([init/0,server/0]).
 
-server() ->
+%% frequency:start().
+%% frequency ! {request, self(), allocate}.
+%% frequency ! {request, self(), allocate}.
+%% frequency ! {request, self(), {deallocate, 10}}.
+
+start() ->
   Pid = spawn(frequency, init, []),
   register(frequency, Pid).
 
@@ -22,6 +27,18 @@ init() ->
 
 % Hard Coded
 get_frequencies() -> [10,11,12,13,14,15].
+
+allocate() ->
+  frequency ! {request, self(), allocate},
+  receive
+    {reply, Reply} -> Reply.
+  end.
+
+deallocate(Freq) ->
+  frequency ! {request, self(), {deallocate, Freq}},
+  receive
+    {reply, Reply} -> Reply.
+  end.
 
 %% The Main Loop
 
