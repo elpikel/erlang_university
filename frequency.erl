@@ -7,7 +7,7 @@
 %%   (c) Francesco Cesarini and Simon Thompson
 
 -module(frequency).
--export([init/0,server/0]).
+-export([init/0,start/0,allocate/0,deallocate/1]).
 
 %% frequency:start().
 %% frequency ! {request, self(), allocate}.
