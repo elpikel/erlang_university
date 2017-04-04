@@ -7,13 +7,9 @@
 %%   (c) Francesco Cesarini and Simon Thompson
 
 -module(frequency).
--export([init/0,start/0,allocate/0,deallocate/1]).
+-export([init/0,start/0,allocate/1,deallocate/2,exit/1]).
 
-%% frequency:start().
-%% frequency ! {request, self(), allocate}.
-%% frequency ! {request, self(), allocate}.
-%% frequency ! {request, self(), {deallocate, 10}}.
-
+%% Start frequency server with frequency as a name
 start() ->
   Pid = spawn(frequency, init, []),
   register(frequency, Pid).
@@ -22,23 +18,25 @@ start() ->
 %% initialize the server.
 
 init() ->
+  process_flag(trap_exit, true),
   Frequencies = {get_frequencies(), []},
   loop(Frequencies).
 
 % Hard Coded
 get_frequencies() -> [10,11,12,13,14,15].
 
-allocate() ->
-  frequency ! {request, self(), allocate},
-  receive
-    {reply, Reply} -> Reply.
-  end.
+%% Public contract of Frequency server
 
-deallocate(Freq) ->
-  frequency ! {request, self(), {deallocate, Freq}},
-  receive
-    {reply, Reply} -> Reply.
-  end.
+%% Allocates frequency if it is not already taken
+allocate(Pid) ->
+  frequency ! {request, Pid, allocate}.
+
+%% Deallocates frequency if it is already allocated
+deallocate(Pid, Freq) ->
+  frequency ! {request, Pid, {deallocate, Freq}}.
+
+exit(Pid) ->
+  frequency ! {'EXIT', Pid, "just want to"}.
 
 %% The Main Loop
 
@@ -52,6 +50,9 @@ loop(Frequencies) ->
       NewFrequencies = deallocate(Frequencies, Freq, Pid),
       Pid ! {reply, ok},
       loop(NewFrequencies);
+    {'EXIT', Pid, _Reason} ->
+      NewFrequencies = exited(Frequencies, Pid),
+      loop(NewFrequencies);
     {request, Pid, stop} ->
       Pid ! {reply, stopped}
   end.
@@ -63,15 +64,27 @@ allocate({[], Allocated}, _Pid) ->
   {{[], Allocated}, {error, no_frequency}};
 allocate({[Freq|Free], Allocated}, Pid) ->
   case is_allocated(Pid, Allocated) of
-    true  -> {{Free, Allocated}, {cannot_alocate_more_than_one}};
+    true  ->
+      link(Pid),
+      {{Free, Allocated}, {cannot_alocate_more_than_one}};
     false -> {{Free, [{Freq, Pid}|Allocated]}, {ok, Freq}}
   end.
 
 deallocate({Free, Allocated}, Freq, Pid) ->
   case is_allocated(Pid, Allocated) of
     true  ->
+      unlink(Pid),
       NewAllocated=lists:keydelete(Freq, 1, Allocated),
       {[Freq|Free],  NewAllocated};
+    false ->
+      {Free, Allocated}
+  end.
+
+exited({Free, Allocated}, Pid) ->
+  case lists:keysearch(Pid, 2, Allocated) of
+    {value, {Freq, Pid}} ->
+      NewAllocated = lists:keydelete(Freq, 1, Allocated),
+      {[Freq|Free],NewAllocated};
     false ->
       {Free, Allocated}
   end.
