@@ -11,14 +11,15 @@
 
 %% Start frequency server with frequency as a name
 start() ->
-  Pid = spawn(frequency, init, []),
-  register(frequency, Pid).
+  Pid = spawn_link(frequency, init, []),
+  register(frequency, Pid),
+  Pid.
 
 %% These are the start functions used to create and
 %% initialize the server.
 
 init() ->
-  process_flag(trap_exit, true),
+  %process_flag(trap_exit, true),
   Frequencies = {get_frequencies(), []},
   loop(Frequencies).
 
